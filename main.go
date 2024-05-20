@@ -19,7 +19,7 @@ import (
 
 var address string = retrieveAddress()
 
-var transport = &http.Transport{ // Remove when we have proper SSL certificate
+var transport = &http.Transport{
 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 }
 
@@ -110,6 +110,69 @@ func main() {
 				},
 				Action: func(cCtx *cli.Context) error {
 					updateSheet(cCtx.String("sheet"))
+					return nil
+				},
+			},
+			{
+				Name:  "getScouterSchedule",
+				Usage: "Gets the schedule of a single scouter.",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "scouter",
+						Usage: "The scouter's name",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					getScouterSchedule(cCtx.String("scouter"))
+					return nil
+				},
+			},
+			{
+				Name:  "getLeaderboard",
+				Usage: "Gets the leaderboard from the backend",
+				Action: func(cCtx *cli.Context) error {
+					getLeaderboard()
+					return nil
+				},
+			},
+			{
+				Name:  "getAddress",
+				Usage: "Gets the cached address",
+				Action: func(cCtx *cli.Context) error {
+					println(retrieveAddress())
+					return nil
+				},
+			},
+			{
+				Name:  "getUsers",
+				Usage: "Gets the list of all users",
+				Action: func(cCtx *cli.Context) error {
+					getUsers()
+					return nil
+				},
+			},
+			{
+				Name:  "modify-leaderboard",
+				Usage: "Modify the leaderboard",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "name",
+						Aliases: []string{"n"},
+						Usage:   "Name of scouter to modify",
+					},
+					&cli.StringFlag{
+						Name:    "Modification",
+						Aliases: []string{"m"},
+						Usage:   "The type of modification: Increase, Decrease, or Set",
+					},
+					&cli.IntFlag{
+						Name:    "By",
+						Aliases: []string{"b"},
+						Usage:   "How much to modify by",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					modifyLeaderboard(cCtx.String("name"), Modification(cCtx.String("Modification")), cCtx.Int("By"))
 					return nil
 				},
 			},
@@ -287,5 +350,85 @@ func updateSheet(newSheet string) {
 
 		sb := string(newBody)
 		log.Println("Server Returned: " + sb)
+	}
+}
+
+func getScouterSchedule(name string) {
+	request, _ := http.NewRequest("GET", address+"/singleSchedule", bytes.NewBufferString(""))
+	request.Header.Add("Certificate", retrieveCredentials().Certificate)
+	request.Header.Add("userInput", name)
+
+	resp, _ := client.Do(request)
+
+	if resp == nil {
+		log.Println("Server did not return a response.")
+	} else {
+		newBody, _ := io.ReadAll(resp.Body)
+
+		sb := string(newBody)
+		log.Println("Server Returned: " + sb)
+	}
+}
+
+type ModRequest struct {
+	Name string
+	By   int
+	Mod  Modification
+}
+
+type Modification string
+
+const (
+	Increase Modification = "Increase"
+	Decrease Modification = "Decrease"
+	Set      Modification = "Set"
+)
+
+func getLeaderboard() {
+	response, _ := client.Get(address + "/leaderboard")
+
+	if response == nil {
+		log.Println("Server did not return a response.")
+	} else {
+		newBody, _ := io.ReadAll(response.Body)
+
+		sb := string(newBody)
+		log.Print(sb)
+	}
+}
+
+func modifyLeaderboard(name string, mod Modification, by int) {
+	jsonBytes, _ := json.Marshal(ModRequest{Name: name, Mod: mod, By: by})
+	request, _ := http.NewRequest("POST", address+"/modScore", bytes.NewBuffer(jsonBytes))
+	request.Header.Add("Certificate", retrieveCredentials().Certificate)
+
+	resp, _ := client.Do(request)
+
+	if resp == nil {
+		log.Println("Server did not return a response.")
+	} else {
+		newBody, _ := io.ReadAll(resp.Body)
+
+		sb := string(newBody)
+		log.Println("Server Returned: " + sb)
+	}
+}
+
+func getUsers() {
+	request, err := http.NewRequest("GET", address+"/allUsers", bytes.NewBufferString(""))
+	request.Header.Add("Certificate", retrieveCredentials().Certificate)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	response, _ := client.Do(request)
+
+	if response == nil {
+		log.Println("Server did not return a response.")
+	} else {
+		newBody, _ := io.ReadAll(response.Body)
+
+		sb := string(newBody)
+		log.Print(sb)
 	}
 }
