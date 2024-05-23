@@ -415,6 +415,10 @@ func modifyLeaderboard(name string, mod Modification, by int) {
 }
 
 func getUsers() {
+	if !checkForValidCert() {
+		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+	}
+
 	request, err := http.NewRequest("GET", address+"/allUsers", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 	if err != nil {
@@ -431,4 +435,16 @@ func getUsers() {
 		sb := string(newBody)
 		log.Print(sb)
 	}
+}
+
+func checkForValidCert() bool {
+	request, err := http.NewRequest("GET", address+"/certificateValid", bytes.NewBufferString(""))
+	request.Header.Add("Certificate", retrieveCredentials().Certificate)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	response, _ := client.Do(request)
+
+	return response.StatusCode == 200
 }
