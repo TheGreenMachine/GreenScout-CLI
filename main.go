@@ -186,6 +186,10 @@ func main() {
 }
 
 func KeyChangeRequest(newKey string) {
+	if !checkForValidCert() {
+		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+	}
+
 	keyBytes := []byte(newKey)
 
 	body := bytes.NewReader(keyBytes)
@@ -212,6 +216,10 @@ func KeyChangeRequest(newKey string) {
 }
 
 func validateOn() {
+	if !checkForValidCert() {
+		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+	}
+
 	request, _ := http.NewRequest("GET", address+"/", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 
@@ -341,6 +349,10 @@ func retrieveAddress() string {
 }
 
 func updateSheet(newSheet string) {
+	if !checkForValidCert() {
+		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+	}
+
 	response, _ := client.Post(address+"/sheetChange", "text/plain", bytes.NewBufferString(newSheet))
 
 	if response == nil {
@@ -354,6 +366,10 @@ func updateSheet(newSheet string) {
 }
 
 func getScouterSchedule(name string) {
+	if !checkForValidCert() {
+		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+	}
+
 	request, _ := http.NewRequest("GET", address+"/singleSchedule", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 	request.Header.Add("userInput", name)
@@ -398,6 +414,10 @@ func getLeaderboard() {
 }
 
 func modifyLeaderboard(name string, mod Modification, by int) {
+	if !checkForValidCert() {
+		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+	}
+
 	jsonBytes, _ := json.Marshal(ModRequest{Name: name, Mod: mod, By: by})
 	request, _ := http.NewRequest("POST", address+"/modScore", bytes.NewBuffer(jsonBytes))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
