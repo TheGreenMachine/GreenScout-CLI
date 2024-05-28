@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -41,6 +42,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					KeyChangeRequest(cCtx.String("key"))
 					return nil
 				},
@@ -62,6 +64,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					sendPassword(cCtx.String("username"), cCtx.String("password"))
 					return nil
 				},
@@ -71,6 +74,7 @@ func main() {
 				Aliases: []string{"v"},
 				Usage:   "Validates the server is on",
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					validateOn()
 					return nil
 				},
@@ -79,6 +83,7 @@ func main() {
 				Name:  "getSchedule",
 				Usage: "Gets the schedule for the current selected event",
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					requestSchedule()
 					return nil
 				},
@@ -109,6 +114,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					updateSheet(cCtx.String("sheet"))
 					return nil
 				},
@@ -123,6 +129,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					getScouterSchedule(cCtx.String("scouter"))
 					return nil
 				},
@@ -131,6 +138,7 @@ func main() {
 				Name:  "getLeaderboard",
 				Usage: "Gets the leaderboard from the backend",
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					getLeaderboard()
 					return nil
 				},
@@ -147,6 +155,7 @@ func main() {
 				Name:  "getUsers",
 				Usage: "Gets the list of all users",
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					getUsers()
 					return nil
 				},
@@ -172,6 +181,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
+					performChecks()
 					modifyLeaderboard(cCtx.String("name"), Modification(cCtx.String("Modification")), cCtx.Int("By"))
 					return nil
 				},
@@ -185,11 +195,12 @@ func main() {
 
 }
 
-func KeyChangeRequest(newKey string) {
-	if !checkForValidCert() {
-		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
-	}
+func performChecks() {
+	checkForAddress()
+	checkForValidCert()
+}
 
+func KeyChangeRequest(newKey string) {
 	keyBytes := []byte(newKey)
 
 	body := bytes.NewReader(keyBytes)
@@ -215,23 +226,20 @@ func KeyChangeRequest(newKey string) {
 	log.Print(sb)
 }
 
-func validateOn() {
-	if !checkForValidCert() {
-		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
-	}
-
+func validateInternally() bool {
 	request, _ := http.NewRequest("GET", address+"/", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 
 	resp, _ := client.Do(request)
 
-	if resp == nil {
-		log.Println("Server did not return a response.")
-	} else {
-		newBody, _ := io.ReadAll(resp.Body)
+	return resp != nil
+}
 
-		sb := string(newBody)
-		log.Println("Server Returned: " + sb)
+func validateOn() {
+	if validateInternally() {
+		println("Server validated to be on!")
+	} else {
+		fmt.Printf("Server offline. Please make sure %v is the right address.", address)
 	}
 }
 
@@ -349,10 +357,6 @@ func retrieveAddress() string {
 }
 
 func updateSheet(newSheet string) {
-	if !checkForValidCert() {
-		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
-	}
-
 	response, _ := client.Post(address+"/sheetChange", "text/plain", bytes.NewBufferString(newSheet))
 
 	if response == nil {
@@ -366,10 +370,6 @@ func updateSheet(newSheet string) {
 }
 
 func getScouterSchedule(name string) {
-	if !checkForValidCert() {
-		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
-	}
-
 	request, _ := http.NewRequest("GET", address+"/singleSchedule", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 	request.Header.Add("userInput", name)
@@ -414,10 +414,6 @@ func getLeaderboard() {
 }
 
 func modifyLeaderboard(name string, mod Modification, by int) {
-	if !checkForValidCert() {
-		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
-	}
-
 	jsonBytes, _ := json.Marshal(ModRequest{Name: name, Mod: mod, By: by})
 	request, _ := http.NewRequest("POST", address+"/modScore", bytes.NewBuffer(jsonBytes))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
@@ -435,10 +431,6 @@ func modifyLeaderboard(name string, mod Modification, by int) {
 }
 
 func getUsers() {
-	if !checkForValidCert() {
-		log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
-	}
-
 	request, err := http.NewRequest("GET", address+"/allUsers", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 	if err != nil {
@@ -457,7 +449,13 @@ func getUsers() {
 	}
 }
 
-func checkForValidCert() bool {
+func checkForAddress() {
+	if address == "" {
+		log.Fatalln("Please enter an address for the server using ./GreenScoutCLI update-address", address)
+	}
+}
+
+func checkForValidCert() {
 	request, err := http.NewRequest("GET", address+"/certificateValid", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
 	if err != nil {
@@ -466,5 +464,11 @@ func checkForValidCert() bool {
 
 	response, _ := client.Do(request)
 
-	return response.StatusCode == 200
+	if response.StatusCode != 200 {
+		if validateInternally() {
+			log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
+		} else {
+			log.Fatalln("Server offline. Please make sure %v is the right address.", address)
+		}
+	}
 }
