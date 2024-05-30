@@ -186,6 +186,32 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:  "addBadge",
+				Usage: "Add a badge",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "name",
+						Aliases: []string{"n"},
+						Usage:   "Name of scouter to modify",
+					},
+					&cli.StringFlag{
+						Name:    "badge",
+						Aliases: []string{"b"},
+						Usage:   "The Badge name to add",
+					},
+					&cli.StringFlag{
+						Name:    "description",
+						Aliases: []string{"d"},
+						Usage:   "The badge description",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					performChecks()
+					addBadge(cCtx.String("name"), cCtx.String("badge"), cCtx.String("description"))
+					return nil
+				},
+			},
 		},
 	}
 
@@ -392,6 +418,11 @@ type ModRequest struct {
 	Mod  Modification
 }
 
+type Badge struct {
+	ID          string
+	Description string
+}
+
 type Modification string
 
 const (
@@ -417,6 +448,25 @@ func modifyLeaderboard(name string, mod Modification, by int) {
 	jsonBytes, _ := json.Marshal(ModRequest{Name: name, Mod: mod, By: by})
 	request, _ := http.NewRequest("POST", address+"/modScore", bytes.NewBuffer(jsonBytes))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
+
+	resp, _ := client.Do(request)
+
+	if resp == nil {
+		log.Println("Server did not return a response.")
+	} else {
+		newBody, _ := io.ReadAll(resp.Body)
+
+		sb := string(newBody)
+		log.Println("Server Returned: " + sb)
+	}
+}
+
+func addBadge(name string, badge string, description string) {
+	jsonBytes, _ := json.Marshal(Badge{ID: badge, Description: description})
+
+	request, _ := http.NewRequest("POST", address+"/addBadge", bytes.NewBuffer(jsonBytes))
+	request.Header.Add("Certificate", retrieveCredentials().Certificate)
+	request.Header.Add("Username", name)
 
 	resp, _ := client.Do(request)
 
