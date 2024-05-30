@@ -518,7 +518,7 @@ func checkForValidCert() {
 		if validateInternally() {
 			log.Fatalln("Certificate Invalid. Please log in with ./GreenScoutCLI login")
 		} else {
-			log.Fatalln("Server offline. Please make sure %v is the right address.", address)
+			log.Fatalln("Server offline. Please make sure " + address + " is the right address.")
 		}
 	}
 }
