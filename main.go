@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var address string = retrieveAddress()
@@ -160,6 +161,23 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:  "genPassword",
+				Usage: "Generates a new password using bcrypt",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "password",
+						Aliases: []string{"p"},
+						Usage:   "Name of scouter to modify",
+					},
+				},
+				Action: func(cCtx *cli.Context) error {
+					encrypted, _ := bcrypt.GenerateFromPassword([]byte(cCtx.String("password")), 6)
+					fmt.Println(string(encrypted))
+					return nil
+				},
+			},
+
 			{
 				Name:  "modify-leaderboard",
 				Usage: "Modify the leaderboard",
