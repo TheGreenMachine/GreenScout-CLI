@@ -19,8 +19,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// The address it makes requests to
 var address string = retrieveAddress()
 
+// Allows it to make https requests to localhost mocking https
 var transport = &http.Transport{
 	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 }
@@ -239,11 +241,13 @@ func main() {
 
 }
 
+// Checks for a valid address and certificate
 func performChecks() {
 	checkForAddress()
 	checkForValidCert()
 }
 
+// Sends a request to change the event key
 func KeyChangeRequest(newKey string) {
 	keyBytes := []byte(newKey)
 
@@ -260,16 +264,15 @@ func KeyChangeRequest(newKey string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	//We Read the response body on the line below.
 	newBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	//Convert the body to type string
 	sb := string(newBody)
 	log.Print(sb)
 }
 
+// Validates the certificate
 func validateInternally() bool {
 	request, _ := http.NewRequest("GET", address+"/", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
@@ -279,6 +282,7 @@ func validateInternally() bool {
 	return resp != nil
 }
 
+// Validates the server is on
 func validateOn() {
 	if validateInternally() {
 		println("Server validated to be on!")
@@ -287,6 +291,7 @@ func validateOn() {
 	}
 }
 
+// Sends a request for the event schedule
 func requestSchedule() {
 	response, _ := client.Get(address + "/schedule")
 
@@ -301,11 +306,12 @@ func requestSchedule() {
 
 }
 
+// Logs in
 func sendPassword(username string, password string) {
 	pub := getPublicKey()
 
 	encryptedPassword, _ := rsa.EncryptPKCS1v15(rand.Reader, pub, []byte(password))
-	request := loginRequest{
+	request := LoginRequest{
 		Username:          username,
 		EncryptedPassword: encryptedPassword,
 	}
@@ -329,6 +335,7 @@ func sendPassword(username string, password string) {
 	saveCredentials(response.Header.Get("uuid"), response.Header.Get("certificate"))
 }
 
+// Gets the RSA public key from the server
 func getPublicKey() *rsa.PublicKey {
 	response, _ := client.Get(address + "/pub")
 
@@ -341,19 +348,25 @@ func getPublicKey() *rsa.PublicKey {
 	return key
 }
 
-type loginRequest struct {
-	Username          string
-	EncryptedPassword []byte
+// A request to log in
+type LoginRequest struct {
+	Username          string // The username
+	EncryptedPassword []byte // The password, encrypted with the RSA public key
 }
 
+// User credentials
 type Credentials struct {
-	UUID        string
-	Certificate string
+	UUID        string // The uuid
+	Certificate string // The certificate
 }
 
+// The user configuration directory
 var appdata, _ = os.UserConfigDir()
+
+// The path to the GreenScoutCLI config directory
 var configDir = filepath.Join(appdata, "GreenScoutCLI")
 
+// Saves credentials to the file system
 func saveCredentials(uuid string, certificate string) {
 	os.Mkdir(configDir, os.ModePerm) // Not checking error here bcs the only real error is it alr existing
 
@@ -367,6 +380,7 @@ func saveCredentials(uuid string, certificate string) {
 	json.NewEncoder(file).Encode(myCreds)
 }
 
+// Gets the credentials from the file system
 func retrieveCredentials() Credentials {
 	file, _ := os.Open(filepath.Join(configDir, "credentials.json"))
 	defer file.Close()
@@ -378,6 +392,7 @@ func retrieveCredentials() Credentials {
 	return credentials
 }
 
+// Updates the address it attempts to make requests to
 func updateAddress(newAddress string) {
 	os.Mkdir(configDir, os.ModePerm) // Not checking error here bcs the only real error is it alr existing
 
@@ -391,6 +406,7 @@ func updateAddress(newAddress string) {
 	address = newAddress
 }
 
+// Retrieves the address to make requests to
 func retrieveAddress() string {
 	file, _ := os.Open(filepath.Join(configDir, "address.txt"))
 	defer file.Close()
@@ -400,6 +416,7 @@ func retrieveAddress() string {
 	return string(dataBytes)
 }
 
+// Sends a sheet update request
 func updateSheet(newSheet string) {
 	response, _ := client.Post(address+"/sheetChange", "text/plain", bytes.NewBufferString(newSheet))
 
@@ -413,6 +430,7 @@ func updateSheet(newSheet string) {
 	}
 }
 
+// Gets the schedule of a specific scouter
 func getScouterSchedule(name string) {
 	request, _ := http.NewRequest("GET", address+"/singleSchedule", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
@@ -430,12 +448,14 @@ func getScouterSchedule(name string) {
 	}
 }
 
+// A leaderboard modification request
 type ModRequest struct {
 	Name string
 	By   int
 	Mod  Modification
 }
 
+// A badge
 type Badge struct {
 	ID          string
 	Description string
@@ -443,12 +463,13 @@ type Badge struct {
 
 type Modification string
 
-const (
+const ( // Modification type enum
 	Increase Modification = "Increase"
 	Decrease Modification = "Decrease"
 	Set      Modification = "Set"
 )
 
+// Gets the leaderboard from the server
 func getLeaderboard() {
 	response, _ := client.Get(address + "/leaderboard")
 
@@ -462,6 +483,7 @@ func getLeaderboard() {
 	}
 }
 
+// Sends a request to modify the leaderboard
 func modifyLeaderboard(name string, mod Modification, by int) {
 	jsonBytes, _ := json.Marshal(ModRequest{Name: name, Mod: mod, By: by})
 	request, _ := http.NewRequest("POST", address+"/modScore", bytes.NewBuffer(jsonBytes))
@@ -479,6 +501,7 @@ func modifyLeaderboard(name string, mod Modification, by int) {
 	}
 }
 
+// Adds a badge to the leaderboard
 func addBadge(name string, badge string, description string) {
 	jsonBytes, _ := json.Marshal(Badge{ID: badge, Description: description})
 
@@ -498,6 +521,7 @@ func addBadge(name string, badge string, description string) {
 	}
 }
 
+// Gets all users from the server
 func getUsers() {
 	request, err := http.NewRequest("GET", address+"/allUsers", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
@@ -517,12 +541,14 @@ func getUsers() {
 	}
 }
 
+// Ensures the address is not null
 func checkForAddress() {
 	if address == "" {
 		log.Fatalln("Please enter an address for the server using ./GreenScoutCLI update-address", address)
 	}
 }
 
+// Checks the certificate is valid
 func checkForValidCert() {
 	request, err := http.NewRequest("GET", address+"/certificateValid", bytes.NewBufferString(""))
 	request.Header.Add("Certificate", retrieveCredentials().Certificate)
