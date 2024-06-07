@@ -34,7 +34,7 @@ Finally, to see the CLI's options, type
 
 If you are so inclined, you can move the executable into your $PATH, though I do not recommend this, as the CLI is under constant development and constantly replacing such an executable may get tiresome. 
 
-If you are using VS Code, I highly recommend installing the [Golang Extension](https://marketplace.visualstudio.com/items?itemName=golang.Go) and [Dart Extension]as they provide code highlighting, code suggestions, an integrated build system, and debug console into the editor.
+If you are using VS Code, I highly recommend installing the [Golang Extension](https://marketplace.visualstudio.com/items?itemName=golang.Go).
 
 Additional documentation, such as a list of commands available can be found [here](./docs/).
 
