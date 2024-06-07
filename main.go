@@ -52,7 +52,7 @@ func main() {
 			},
 			{
 				Name:    "login",
-				Aliases: []string{"l"},
+				Aliases: []string{"L"},
 				Usage:   "Login to the app",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -67,7 +67,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					performChecks()
+					checkForAddress()
 					sendPassword(cCtx.String("username"), cCtx.String("password"))
 					return nil
 				},
@@ -77,7 +77,7 @@ func main() {
 				Aliases: []string{"v"},
 				Usage:   "Validates the server is on",
 				Action: func(cCtx *cli.Context) error {
-					performChecks()
+					checkForAddress()
 					validateOn()
 					return nil
 				},
@@ -86,7 +86,7 @@ func main() {
 				Name:  "getSchedule",
 				Usage: "Gets the schedule for the current selected event",
 				Action: func(cCtx *cli.Context) error {
-					performChecks()
+					checkForAddress()
 					requestSchedule()
 					return nil
 				},
